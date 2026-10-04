@@ -1,11 +1,12 @@
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
-local GuiService = game:GetService("GuiService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local GuiService = game:GetService("GuiService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+-- 1. Tworzenie GUI AutoFish
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AutoFishGUI"
 screenGui.ResetOnSpawn = false
@@ -96,53 +97,33 @@ local btnCorner = Instance.new("UICorner")
 btnCorner.CornerRadius = UDim.new(0, 10)
 btnCorner.Parent = toggleButton
 
-local function clickGuiElement(target)
-    -- Pobieramy środek przycisku na ekranie
-    local pos = target.AbsolutePosition
-    local size = target.AbsoluteSize
-    local centerX = pos.X + (size.X / 2)
-    local centerY = pos.Y + (size.Y / 2)
+-- 2. Funkcja klikająca bezpośrednio w ClickSpeedUp
+local function clickButton(button)
+    local absPos = button.AbsolutePosition
+    local absSize = button.AbsoluteSize
+    local centerX = absPos.X + (absSize.X / 2)
+    local centerY = absPos.Y + (absSize.Y / 2)
 
+    -- Bufor stabilizujący (chroni przed falstartem / anty-spamem gry)
     task.wait(0.08)
 
+    -- Sposób 1: Bezpośrednie wywołanie połączeń przycisku
     pcall(function()
-        if target:IsA("GuiButton") then
-            for _, conn in pairs(getconnections(target.MouseButton1Click)) do
-                conn:Fire()
-            end
-            for _, conn in pairs(getconnections(target.Activated)) do
-                conn:Fire()
-            end
+        if getconnections then
+            for _, conn in pairs(getconnections(button.MouseButton1Click)) do conn:Fire() end
+            for _, conn in pairs(getconnections(button.Activated)) do conn:Fire() end
         end
     end)
 
+    -- Sposób 2: Kliknięcie wirtualną myszką (VirtualInputManager) w środek przycisku
     pcall(function()
         VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
-        task.wait(0.05)
+        task.wait(0.06)
         VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
     end)
 end
 
-local function isCircleTarget(obj)
-    if obj:IsA("GuiObject") and obj.Visible and obj.AbsoluteSize.X > 15 and obj.AbsoluteSize.Y > 15 then
-        -- Omijamy elementy naszego własnego menu
-        if obj:IsDescendantOf(screenGui) then 
-            return false 
-        end
-
-        local nameLower = obj.Name:lower()
-        if nameLower:find("circle") or nameLower:find("target") or nameLower:find("ring") or nameLower:find("hit") or nameLower:find("fish") then
-            return true
-        end
-
-        local cornerChild = obj:FindFirstChildOfClass("UICorner")
-        if cornerChild and (cornerChild.CornerRadius.Scale >= 0.5 or cornerChild.CornerRadius.Offset >= 20) then
-            return true
-        end
-    end
-    return false
-end
-
+-- 3. Pętla bota
 local isRunning = false
 local loopThread = nil
 
@@ -157,22 +138,20 @@ local function setBotState(active)
 
         loopThread = task.spawn(function()
             while isRunning do
-                local clickedAny = false
-
-                -- Przeszukujemy interfejsy gracza
-                for _, gui in ipairs(playerGui:GetChildren()) do
-                    if gui:IsA("ScreenGui") and gui.Enabled and gui ~= screenGui then
-                        for _, element in ipairs(gui:GetDescendants()) do
-                            if isCircleTarget(element) then
-                                clickGuiElement(element)
-                                clickedAny = true
-                                -- Zabezpieczenie anty-spamowe: pauza po udanym kliknięciu
-                                task.wait(0.40)
-                                break
-                            end
+                -- Wyszukiwanie dokładnej ścieżki w PlayerGui
+                local fishingGui = playerGui:FindFirstChild("FishingGui")
+                if fishingGui and fishingGui.Enabled then
+                    local fishingFrame = fishingGui:FindFirstChild("Fishing")
+                    if fishingFrame and fishingFrame.Visible then
+                        local btn = fishingFrame:FindFirstChild("ClickSpeedUp")
+                        
+                        -- Sprawdzamy czy przycisk istnieje, jest widoczny i ma rozmiar
+                        if btn and btn:IsA("ImageButton") and btn.Visible and btn.AbsoluteSize.X > 0 then
+                            clickButton(btn)
+                            -- Cooldown na animację zaliczenia trafienia
+                            task.wait(0.46)
                         end
                     end
-                    if clickedAny then break end
                 end
 
                 task.wait(0.02)
@@ -196,6 +175,7 @@ toggleButton.MouseButton1Click:Connect(function()
     setBotState(not isRunning)
 end)
 
+-- 4. Obsługa chowania okna (Prawy Shift)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.RightShift then
         mainFrame.Visible = not mainFrame.Visible
