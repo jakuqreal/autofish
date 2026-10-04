@@ -1,0 +1,162 @@
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 1. Tworzenie kontenera ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoFishGUI"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Zabezpieczenie przed podwójnym uruchomieniem
+if playerGui:FindFirstChild("AutoFishGUI") then
+    playerGui.AutoFishGUI:Destroy()
+end
+screenGui.Parent = playerGui
+
+-- 2. Główne okno (Styl Dark / Oceanic)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 320, 0, 240)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -120)
+mainFrame.BackgroundColor3 = Color3.fromRGB(11, 22, 34)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = true
+mainFrame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = mainFrame
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(0, 201, 232)
+stroke.Thickness = 1.5
+stroke.Parent = mainFrame
+
+-- 3. Nagłówek i Tytuł
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "Title"
+titleLabel.Size = UDim2.new(1, -20, 0, 40)
+titleLabel.Position = UDim2.new(0, 14, 0, 8)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "AutoFish"
+titleLabel.Font = Enum.Font.FredokaOne
+titleLabel.TextSize = 26
+titleLabel.TextColor3 = Color3.fromRGB(0, 242, 254)
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = mainFrame
+
+local hintLabel = Instance.new("TextLabel")
+hintLabel.Name = "Hint"
+hintLabel.Size = UDim2.new(1, -20, 0, 16)
+hintLabel.Position = UDim2.new(0, 14, 0, 44)
+hintLabel.BackgroundTransparency = 1
+hintLabel.Text = "[Prawy Shift] - Pokaż / Ukryj Menu"
+hintLabel.Font = Enum.Font.GothamMedium
+hintLabel.TextSize = 11
+hintLabel.TextColor3 = Color3.fromRGB(130, 170, 195)
+hintLabel.TextXAlignment = Enum.TextXAlignment.Left
+hintLabel.Parent = mainFrame
+
+-- 4. Status pracy
+local statusCard = Instance.new("Frame")
+statusCard.Name = "StatusCard"
+statusCard.Size = UDim2.new(1, -28, 0, 38)
+statusCard.Position = UDim2.new(0, 14, 0, 72)
+statusCard.BackgroundColor3 = Color3.fromRGB(16, 32, 48)
+statusCard.BorderSizePixel = 0
+statusCard.Parent = mainFrame
+
+local statusCorner = Instance.new("UICorner")
+statusCorner.CornerRadius = UDim.new(0, 8)
+statusCorner.Parent = statusCard
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Name = "StatusText"
+statusLabel.Size = UDim2.new(1, 0, 1, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "● STATUS: WYŁĄCZONY"
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextSize = 13
+statusLabel.TextColor3 = Color3.fromRGB(255, 75, 114)
+statusLabel.Parent = statusCard
+
+-- 5. Główny przycisk Włącz / Wyłącz
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Size = UDim2.new(1, -28, 0, 48)
+toggleButton.Position = UDim2.new(0, 14, 0, 125)
+toggleButton.BackgroundColor3 = Color3.fromRGB(0, 201, 232)
+toggleButton.BorderSizePixel = 0
+toggleButton.Font = Enum.Font.GothamBlack
+toggleButton.Text = "URUCHOM"
+toggleButton.TextColor3 = Color3.fromRGB(5, 16, 26)
+toggleButton.TextSize = 15
+toggleButton.Parent = mainFrame
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 10)
+btnCorner.Parent = toggleButton
+
+-- Info na dole
+local footerLabel = Instance.new("TextLabel")
+footerLabel.Name = "Footer"
+footerLabel.Size = UDim2.new(1, -28, 0, 20)
+footerLabel.Position = UDim2.new(0, 14, 0, 185)
+footerLabel.BackgroundTransparency = 1
+footerLabel.Text = "Działa automatycznie w pętli gry"
+footerLabel.Font = Enum.Font.Gotham
+footerLabel.TextSize = 10
+footerLabel.TextColor3 = Color3.fromRGB(90, 130, 150)
+footerLabel.Parent = mainFrame
+
+-- 6. Logika działania i pętli
+local isRunning = false
+local loopThread = nil
+
+local function setBotState(active)
+    isRunning = active
+    if isRunning then
+        statusLabel.Text = "● STATUS: AKTYWNY"
+        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 194)
+        toggleButton.Text = "ZATRZYMAJ"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(255, 56, 92)
+        toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+        -- Uruchomienie wątku pracy
+        loopThread = task.spawn(function()
+            while isRunning do
+                -- Tutaj następuje akcja gry (np. wykrywanie elementu w PlayerGui / workspace)
+                -- task.wait zapobiega przegrzaniu procesora i freeze'om gry:
+                task.wait(0.48) -- Czas dostosowany do bezpiecznego debouce minigry
+            end
+        end)
+    else
+        statusLabel.Text = "● STATUS: WYŁĄCZONY"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 75, 114)
+        toggleButton.Text = "URUCHOM"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(0, 201, 232)
+        toggleButton.TextColor3 = Color3.fromRGB(5, 16, 26)
+
+        if loopThread then
+            task.cancel(loopThread)
+            loopThread = nil
+        end
+    end
+end
+
+toggleButton.MouseButton1Click:Connect(function()
+    setBotState(not isRunning)
+end)
+
+-- 7. Bind klawisza: Prawy Shift (RightShift) do chowania / pokazywania okna
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    -- Sprawdzamy czy wciśnięty klawisz to RightShift
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        mainFrame.Visible = not mainFrame.Visible
+    end
+end)
