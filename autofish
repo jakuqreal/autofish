@@ -1,39 +1,38 @@
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local GuiService = game:GetService("GuiService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- 1. Tworzenie GUI AutoFish
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AutoFishGUI"
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- 1. Tworzenie GUI menu bota (nazwane unikalnie AutoFishMenu, aby nie gryzło się z grą)
+local menuGui = Instance.new("ScreenGui")
+menuGui.Name = "AutoFishMenu"
+menuGui.ResetOnSpawn = false
+menuGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-if playerGui:FindFirstChild("AutoFishGUI") then
-    playerGui.AutoFishGUI:Destroy()
+if playerGui:FindFirstChild("AutoFishMenu") then
+    playerGui.AutoFishMenu:Destroy()
 end
-screenGui.Parent = playerGui
+menuGui.Parent = playerGui
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 320, 0, 240)
-mainFrame.Position = UDim2.new(0.5, -160, 0.5, -120)
-mainFrame.BackgroundColor3 = Color3.fromRGB(11, 22, 34)
-mainFrame.BorderSizePixel = 0
-mainFrame.Visible = true
-mainFrame.Parent = screenGui
+local controlFrame = Instance.new("Frame")
+controlFrame.Name = "ControlFrame"
+controlFrame.Size = UDim2.new(0, 320, 0, 240)
+controlFrame.Position = UDim2.new(0.5, -160, 0.5, -120)
+controlFrame.BackgroundColor3 = Color3.fromRGB(11, 22, 34)
+controlFrame.BorderSizePixel = 0
+controlFrame.Visible = true
+controlFrame.Parent = menuGui
 
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = mainFrame
+corner.Parent = controlFrame
 
 local stroke = Instance.new("UIStroke")
 stroke.Color = Color3.fromRGB(0, 201, 232)
 stroke.Thickness = 1.5
-stroke.Parent = mainFrame
+stroke.Parent = controlFrame
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "Title"
@@ -45,7 +44,7 @@ titleLabel.Font = Enum.Font.FredokaOne
 titleLabel.TextSize = 26
 titleLabel.TextColor3 = Color3.fromRGB(0, 242, 254)
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = mainFrame
+titleLabel.Parent = controlFrame
 
 local hintLabel = Instance.new("TextLabel")
 hintLabel.Name = "Hint"
@@ -57,7 +56,7 @@ hintLabel.Font = Enum.Font.GothamMedium
 hintLabel.TextSize = 11
 hintLabel.TextColor3 = Color3.fromRGB(130, 170, 195)
 hintLabel.TextXAlignment = Enum.TextXAlignment.Left
-hintLabel.Parent = mainFrame
+hintLabel.Parent = controlFrame
 
 local statusCard = Instance.new("Frame")
 statusCard.Name = "StatusCard"
@@ -65,7 +64,7 @@ statusCard.Size = UDim2.new(1, -28, 0, 38)
 statusCard.Position = UDim2.new(0, 14, 0, 72)
 statusCard.BackgroundColor3 = Color3.fromRGB(16, 32, 48)
 statusCard.BorderSizePixel = 0
-statusCard.Parent = mainFrame
+statusCard.Parent = controlFrame
 
 local statusCorner = Instance.new("UICorner")
 statusCorner.CornerRadius = UDim.new(0, 8)
@@ -91,31 +90,31 @@ toggleButton.Font = Enum.Font.GothamBlack
 toggleButton.Text = "URUCHOM"
 toggleButton.TextColor3 = Color3.fromRGB(5, 16, 26)
 toggleButton.TextSize = 15
-toggleButton.Parent = mainFrame
+toggleButton.Parent = controlFrame
 
 local btnCorner = Instance.new("UICorner")
 btnCorner.CornerRadius = UDim.new(0, 10)
 btnCorner.Parent = toggleButton
 
--- 2. Funkcja klikająca bezpośrednio w ClickSpeedUp
-local function clickButton(button)
-    local absPos = button.AbsolutePosition
-    local absSize = button.AbsoluteSize
+-- 2. Funkcja realizująca kliknięcie w podany element GUI
+local function clickTarget(guiObj)
+    local absPos = guiObj.AbsolutePosition
+    local absSize = guiObj.AbsoluteSize
     local centerX = absPos.X + (absSize.X / 2)
     local centerY = absPos.Y + (absSize.Y / 2)
 
-    -- Bufor stabilizujący (chroni przed falstartem / anty-spamem gry)
-    task.wait(0.08)
+    -- Bufor stabilizujący przed kliknięciem
+    task.wait(0.09)
 
-    -- Sposób 1: Bezpośrednie wywołanie połączeń przycisku
+    -- Próba wywołania sygnałów przycisku, jeśli to Button
     pcall(function()
-        if getconnections then
-            for _, conn in pairs(getconnections(button.MouseButton1Click)) do conn:Fire() end
-            for _, conn in pairs(getconnections(button.Activated)) do conn:Fire() end
+        if guiObj:IsA("GuiButton") and getconnections then
+            for _, conn in pairs(getconnections(guiObj.MouseButton1Click)) do conn:Fire() end
+            for _, conn in pairs(getconnections(guiObj.Activated)) do conn:Fire() end
         end
     end)
 
-    -- Sposób 2: Kliknięcie wirtualną myszką (VirtualInputManager) w środek przycisku
+    -- Kliknięcie wirtualną myszką w środek obiektu
     pcall(function()
         VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
         task.wait(0.06)
@@ -123,7 +122,19 @@ local function clickButton(button)
     end)
 end
 
--- 3. Pętla bota
+-- 3. Logika wyszukiwania właściwego celu wewnątrz MainFrame gry
+local function resolveTarget(mainFrameGame)
+    -- Sprawdzamy czy wewnątrz MainFrame gry znajduje się klikalny przycisk lub kółko
+    for _, child in ipairs(mainFrameGame:GetChildren()) do
+        if child:IsA("GuiObject") and child.Visible and child.AbsoluteSize.X > 10 then
+            return child
+        end
+    end
+    -- Jeśli nie ma potomków, celem jest sam MainFrame
+    return mainFrameGame
+end
+
+-- 4. Pętla bota
 local isRunning = false
 local loopThread = nil
 
@@ -138,19 +149,17 @@ local function setBotState(active)
 
         loopThread = task.spawn(function()
             while isRunning do
-                -- Wyszukiwanie dokładnej ścieżki w PlayerGui
-                local fishingGui = playerGui:FindFirstChild("FishingGui")
-                if fishingGui and fishingGui.Enabled then
-                    local fishingFrame = fishingGui:FindFirstChild("Fishing")
-                    if fishingFrame and fishingFrame.Visible then
-                        local btn = fishingFrame:FindFirstChild("ClickSpeedUp")
-                        
-                        -- Sprawdzamy czy przycisk istnieje, jest widoczny i ma rozmiar
-                        if btn and btn:IsA("ImageButton") and btn.Visible and btn.AbsoluteSize.X > 0 then
-                            clickButton(btn)
-                            -- Cooldown na animację zaliczenia trafienia
-                            task.wait(0.46)
-                        end
+                -- Ścieżka gry: playerGui.AutoFishGui.MainFrame
+                local gameGui = playerGui:FindFirstChild("AutoFishGui")
+                if gameGui and gameGui.Enabled then
+                    local mainFrameGame = gameGui:FindFirstChild("MainFrame")
+
+                    if mainFrameGame and mainFrameGame.Visible and mainFrameGame.AbsoluteSize.X > 0 then
+                        local target = resolveTarget(mainFrameGame)
+                        clickTarget(target)
+
+                        -- Przerwa na rejestrację uderzenia przez grę (cooldown)
+                        task.wait(0.48)
                     end
                 end
 
@@ -175,9 +184,9 @@ toggleButton.MouseButton1Click:Connect(function()
     setBotState(not isRunning)
 end)
 
--- 4. Obsługa chowania okna (Prawy Shift)
+-- Przełączanie widoczności pod Prawym Shiftem
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.RightShift then
-        mainFrame.Visible = not mainFrame.Visible
+        controlFrame.Visible = not controlFrame.Visible
     end
 end)
