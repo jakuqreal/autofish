@@ -1,185 +1,238 @@
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-local camera = Workspace.CurrentCamera
 
--- 1. Tworzenie GUI menu AutoFish
+-- 1. Tworzenie nowoczesnego interfejsu (Modern Oceanic Dark)
 local menuGui = Instance.new("ScreenGui")
-menuGui.Name = "AutoFishMenu"
+menuGui.Name = "AutoFish_Pro"
 menuGui.ResetOnSpawn = false
 menuGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-if playerGui:FindFirstChild("AutoFishMenu") then
-    playerGui.AutoFishMenu:Destroy()
+if playerGui:FindFirstChild("AutoFish_Pro") then
+    playerGui.AutoFish_Pro:Destroy()
 end
 menuGui.Parent = playerGui
 
-local controlFrame = Instance.new("Frame")
-controlFrame.Name = "ControlFrame"
-controlFrame.Size = UDim2.new(0, 320, 0, 240)
-controlFrame.Position = UDim2.new(0.5, -160, 0.5, -120)
-controlFrame.BackgroundColor3 = Color3.fromRGB(11, 22, 34)
-controlFrame.BorderSizePixel = 0
-controlFrame.Visible = true
-controlFrame.Parent = menuGui
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 320, 0, 240)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -120)
+mainFrame.BackgroundColor3 = Color3.fromRGB(8, 14, 22)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true -- Możliwość swobodnego przesuwania okna
+mainFrame.Parent = menuGui
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = controlFrame
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 14)
+mainCorner.Parent = mainFrame
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(0, 201, 232)
-stroke.Thickness = 1.5
-stroke.Parent = controlFrame
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(0, 217, 245)
+mainStroke.Thickness = 1.6
+mainStroke.Transparency = 0.2
+mainStroke.Parent = mainFrame
 
+-- Pasek tytułowy
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Name = "Title"
-titleLabel.Size = UDim2.new(1, -20, 0, 40)
-titleLabel.Position = UDim2.new(0, 14, 0, 8)
+titleLabel.Size = UDim2.new(1, -24, 0, 36)
+titleLabel.Position = UDim2.new(0, 16, 0, 12)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "AutoFish"
 titleLabel.Font = Enum.Font.FredokaOne
 titleLabel.TextSize = 26
 titleLabel.TextColor3 = Color3.fromRGB(0, 242, 254)
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = controlFrame
+titleLabel.Parent = mainFrame
+
+local badge = Instance.new("TextLabel")
+badge.Size = UDim2.new(0, 52, 0, 20)
+badge.Position = UDim2.new(1, -68, 0, 18)
+badge.BackgroundColor3 = Color3.fromRGB(15, 30, 45)
+badge.Text = "PRO"
+badge.Font = Enum.Font.GothamBold
+badge.TextSize = 10
+badge.TextColor3 = Color3.fromRGB(0, 242, 254)
+badge.Parent = mainFrame
+Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 6)
 
 local hintLabel = Instance.new("TextLabel")
-hintLabel.Name = "Hint"
-hintLabel.Size = UDim2.new(1, -20, 0, 16)
-hintLabel.Position = UDim2.new(0, 14, 0, 44)
+hintLabel.Size = UDim2.new(1, -24, 0, 16)
+hintLabel.Position = UDim2.new(0, 16, 0, 48)
 hintLabel.BackgroundTransparency = 1
-hintLabel.Text = "[Prawy Shift] - Pokaż / Ukryj Menu"
+hintLabel.Text = "Bind: [Prawy Shift] • Przeciągnij by przesunąć"
 hintLabel.Font = Enum.Font.GothamMedium
 hintLabel.TextSize = 11
-hintLabel.TextColor3 = Color3.fromRGB(130, 170, 195)
+hintLabel.TextColor3 = Color3.fromRGB(120, 150, 175)
 hintLabel.TextXAlignment = Enum.TextXAlignment.Left
-hintLabel.Parent = controlFrame
+hintLabel.Parent = mainFrame
 
+-- Karta Statusu
 local statusCard = Instance.new("Frame")
-statusCard.Name = "StatusCard"
-statusCard.Size = UDim2.new(1, -28, 0, 38)
-statusCard.Position = UDim2.new(0, 14, 0, 72)
-statusCard.BackgroundColor3 = Color3.fromRGB(16, 32, 48)
+statusCard.Size = UDim2.new(1, -32, 0, 40)
+statusCard.Position = UDim2.new(0, 16, 0, 76)
+statusCard.BackgroundColor3 = Color3.fromRGB(14, 24, 38)
 statusCard.BorderSizePixel = 0
-statusCard.Parent = controlFrame
+statusCard.Parent = mainFrame
+Instance.new("UICorner", statusCard).CornerRadius = UDim.new(0, 9)
 
-local statusCorner = Instance.new("UICorner")
-statusCorner.CornerRadius = UDim.new(0, 8)
-statusCorner.Parent = statusCard
+local statusStroke = Instance.new("UIStroke")
+statusStroke.Color = Color3.fromRGB(244, 63, 94)
+statusStroke.Thickness = 1.2
+statusStroke.Parent = statusCard
+
+local statusDot = Instance.new("Frame")
+statusDot.Size = UDim2.new(0, 8, 0, 8)
+statusDot.Position = UDim2.new(0, 14, 0.5, -4)
+statusDot.BackgroundColor3 = Color3.fromRGB(244, 63, 94)
+statusDot.BorderSizePixel = 0
+statusDot.Parent = statusCard
+Instance.new("UICorner", statusDot).CornerRadius = UDim.new(1, 0)
 
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Name = "StatusText"
-statusLabel.Size = UDim2.new(1, 0, 1, 0)
+statusLabel.Size = UDim2.new(1, -36, 1, 0)
+statusLabel.Position = UDim2.new(0, 30, 0, 0)
 statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "● STATUS: WYŁĄCZONY"
+statusLabel.Text = "STATUS: WYŁĄCZONY"
 statusLabel.Font = Enum.Font.GothamBold
-statusLabel.TextSize = 13
-statusLabel.TextColor3 = Color3.fromRGB(255, 75, 114)
+statusLabel.TextSize = 12
+statusLabel.TextColor3 = Color3.fromRGB(244, 63, 94)
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 statusLabel.Parent = statusCard
 
+-- Przycisk Toggle
 local toggleButton = Instance.new("TextButton")
-toggleButton.Name = "ToggleButton"
-toggleButton.Size = UDim2.new(1, -28, 0, 48)
-toggleButton.Position = UDim2.new(0, 14, 0, 125)
+toggleButton.Size = UDim2.new(1, -32, 0, 46)
+toggleButton.Position = UDim2.new(0, 16, 0, 130)
 toggleButton.BackgroundColor3 = Color3.fromRGB(0, 201, 232)
 toggleButton.BorderSizePixel = 0
 toggleButton.Font = Enum.Font.GothamBlack
-toggleButton.Text = "URUCHOM"
-toggleButton.TextColor3 = Color3.fromRGB(5, 16, 26)
-toggleButton.TextSize = 15
-toggleButton.Parent = controlFrame
+toggleButton.Text = "URUCHOM BOTA"
+toggleButton.TextColor3 = Color3.fromRGB(6, 16, 26)
+toggleButton.TextSize = 14
+toggleButton.Parent = mainFrame
+Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 10)
 
-local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(0, 10)
-btnCorner.Parent = toggleButton
+-- Pasek informacyjny
+local footerLabel = Instance.new("TextLabel")
+footerLabel.Size = UDim2.new(1, -32, 0, 24)
+footerLabel.Position = UDim2.new(0, 16, 0, 192)
+footerLabel.BackgroundTransparency = 1
+footerLabel.Text = "Czas reakcji: 0.16s • Bezpieczny limit timera"
+footerLabel.Font = Enum.Font.Gotham
+footerLabel.TextSize = 10
+footerLabel.TextColor3 = Color3.fromRGB(80, 120, 145)
+footerLabel.Parent = mainFrame
 
--- 2. Funkcja przeliczająca pozycję BillboardGui i wykonująca kliknięcie
-local function clickFishTarget(billboard, button)
-    -- Bezpieczny bufor wejścia (ochrona przed anty-spamem/falstartem gry)
-    task.wait(0.08)
-
-    -- A. Bezpośrednie wywołanie eventów przycisku w silniku gry
-    if button and getconnections then
-        pcall(function()
-            for _, conn in pairs(getconnections(button.MouseButton1Click)) do conn:Fire() end
-            for _, conn in pairs(getconnections(button.Activated)) do conn:Fire() end
-            for _, conn in pairs(getconnections(button.MouseButton1Down)) do conn:Fire() end
-            for _, conn in pairs(getconnections(button.MouseButton1Up)) do conn:Fire() end
-        end)
-    end
-
-    -- B. Wyliczenie współrzędnych ekranu dla wirtualnego kliknięcia myszką
-    local screenX, screenY = nil, nil
-
-    if button and button.AbsolutePosition.X > 0 and button.AbsolutePosition.Y > 0 then
-        screenX = button.AbsolutePosition.X + (button.AbsoluteSize.X / 2)
-        screenY = button.AbsolutePosition.Y + (button.AbsoluteSize.Y / 2)
-    else
-        -- Przeliczenie ze współrzędnych 3D (Adornee w Workspace)
-        local adornee = billboard.Adornee or (billboard.Parent:IsA("BasePart") and billboard.Parent)
-        if adornee and adornee:IsA("BasePart") then
-            local pos, onScreen = camera:WorldToViewportPoint(adornee.Position + billboard.ExtentsOffsetWorld)
-            if onScreen then
-                screenX, screenY = pos.X, pos.Y
-            end
+-- 2. Sprawdzanie czy minigra nie nałożyła pauzy StreakPaused
+local function isCooldownActive(fishing)
+    local cooldownBar = fishing:FindFirstChild("CooldownBar")
+    if cooldownBar then
+        local streakPaused = cooldownBar:FindFirstChild("StreakPaused")
+        if streakPaused and streakPaused.Visible and streakPaused.TextTransparency < 0.7 then
+            return true
         end
     end
-
-    -- C. Symulacja kliknięcia przez VirtualInputManager
-    if screenX and screenY then
-        pcall(function()
-            VirtualInputManager:SendMouseButtonEvent(screenX, screenY, 0, true, game, 1)
-            task.wait(0.05)
-            VirtualInputManager:SendMouseButtonEvent(screenX, screenY, 0, false, game, 1)
-        end)
-    end
+    return false
 end
 
--- 3. Główna pętla bota
+-- 3. Zmienne sterujące i funkcja kliknięcia
 local isRunning = false
 local loopThread = nil
+local isClicking = false
 
+local function performOptimizedClick(btn, fishing)
+    if isClicking then return end
+    isClicking = true
+
+    -- Zoptymalizowany czas reakcji (z 0.28s do 0.16s)
+    task.wait(0.16)
+
+    -- Czekamy maksymalnie 0.3s jeśli gra nałożyła pauzę
+    local waitCount = 0
+    while isCooldownActive(fishing) and btn.Visible and waitCount < 6 do
+        task.wait(0.05)
+        waitCount = waitCount + 1
+    end
+
+    if isRunning and btn.Visible and btn.AbsolutePosition.X > 0 then
+        local pos = btn.AbsolutePosition
+        local size = btn.AbsoluteSize
+        local centerX = pos.X + (size.X / 2)
+        local centerY = pos.Y + (size.Y / 2)
+
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
+        task.wait(0.05)
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
+    end
+
+    -- Odstęp zabezpieczający przed podwójnym zaliczeniem
+    task.wait(0.35)
+    isClicking = false
+end
+
+-- 4. Funkcja włączania / wyłączania z pełnym resetem blokad
 local function setBotState(active)
     isRunning = active
+    isClicking = false -- Gwarancja braku zacięcia po restarcie
+
     if isRunning then
-        statusLabel.Text = "● STATUS: AKTYWNY"
+        statusLabel.Text = "STATUS: AKTYWNY (SYNCHRONIZACJA)"
         statusLabel.TextColor3 = Color3.fromRGB(0, 255, 194)
-        toggleButton.Text = "ZATRZYMAJ"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(255, 56, 92)
+        statusDot.BackgroundColor3 = Color3.fromRGB(0, 255, 194)
+        statusStroke.Color = Color3.fromRGB(0, 255, 194)
+
+        toggleButton.Text = "ZATRZYMAJ BOTA"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(244, 63, 94)
         toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 
         loopThread = task.spawn(function()
+            local lastHandledPos = Vector2.new(-9999, -9999)
+            local lastHitTimestamp = 0
+
             while isRunning do
-                -- Dokładna ścieżka z Twojego pliku: PlayerGui.FishingView.FishClick
-                local fishingView = playerGui:FindFirstChild("FishingView")
-                if fishingView then
-                    local fishClick = fishingView:FindFirstChild("FishClick")
-                    
-                    if fishClick and fishClick.Enabled then
-                        local buyBtn = fishClick:FindFirstChild("Buy")
-                        -- Jeśli przycisk istnieje i jest widoczny
-                        if buyBtn and buyBtn.Visible then
-                            clickFishTarget(fishClick, buyBtn)
-                            -- Przerwa na zaliczenie trafienia przez grę (cooldown anty-spamowy)
-                            task.wait(0.48)
+                local fishingGui = playerGui:FindFirstChild("FishingGui")
+                if fishingGui and fishingGui.Enabled then
+                    local fishing = fishingGui:FindFirstChild("Fishing")
+                    if fishing and fishing.Visible then
+                        local btn = fishing:FindFirstChild("ClickSpeedUpActive") or fishing:FindFirstChild("ClickSpeedUp")
+
+                        if btn and btn:IsA("ImageButton") and btn.Visible and btn.AbsoluteSize.X > 10 then
+                            local currentPos = btn.AbsolutePosition
+                            local distance = (currentPos - lastHandledPos).Magnitude
+                            local timeSinceLast = tick() - lastHitTimestamp
+
+                            -- Minimalny czas 0.82s - najszybszy możliwy bez wywoływania StreakPaused
+                            if (distance > 60 and timeSinceLast > 0.82) or (timeSinceLast > 1.15) then
+                                lastHandledPos = currentPos
+                                lastHitTimestamp = tick()
+                                performOptimizedClick(btn, fishing)
+                            end
+                        else
+                            lastHandledPos = Vector2.new(-9999, -9999)
                         end
+                    else
+                        lastHandledPos = Vector2.new(-9999, -9999)
                     end
+                else
+                    lastHandledPos = Vector2.new(-9999, -9999)
                 end
 
                 task.wait(0.015)
             end
         end)
     else
-        statusLabel.Text = "● STATUS: WYŁĄCZONY"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 75, 114)
-        toggleButton.Text = "URUCHOM"
+        statusLabel.Text = "STATUS: WYŁĄCZONY"
+        statusLabel.TextColor3 = Color3.fromRGB(244, 63, 94)
+        statusDot.BackgroundColor3 = Color3.fromRGB(244, 63, 94)
+        statusStroke.Color = Color3.fromRGB(244, 63, 94)
+
+        toggleButton.Text = "URUCHOM BOTA"
         toggleButton.BackgroundColor3 = Color3.fromRGB(0, 201, 232)
-        toggleButton.TextColor3 = Color3.fromRGB(5, 16, 26)
+        toggleButton.TextColor3 = Color3.fromRGB(6, 16, 26)
 
         if loopThread then
             task.cancel(loopThread)
@@ -192,9 +245,9 @@ toggleButton.MouseButton1Click:Connect(function()
     setBotState(not isRunning)
 end)
 
--- Przełączanie widoczności pod Prawym Shiftem
+-- Prawy Shift do chowania i pokazywania okna
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.RightShift then
-        controlFrame.Visible = not controlFrame.Visible
+        mainFrame.Visible = not mainFrame.Visible
     end
 end)
