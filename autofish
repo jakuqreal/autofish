@@ -1,253 +1,519 @@
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
+while not player do
+    task.wait(0.1)
+    player = Players.LocalPlayer
+end
+
 local playerGui = player:WaitForChild("PlayerGui")
 
--- 1. Tworzenie nowoczesnego interfejsu (Modern Oceanic Dark)
-local menuGui = Instance.new("ScreenGui")
-menuGui.Name = "AutoFish_Pro"
-menuGui.ResetOnSpawn = false
-menuGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+local AUTH_URL = "http://83.168.107.138:40006/verify?key="
 
-if playerGui:FindFirstChild("AutoFish_Pro") then
-    playerGui.AutoFish_Pro:Destroy()
+local BG_COLOR = Color3.fromRGB(13, 13, 16)
+local ACCENT_RED = Color3.fromRGB(235, 35, 65)
+local CARD_BG = Color3.fromRGB(19, 19, 24)
+local BORDER_COLOR = Color3.fromRGB(32, 32, 40)
+local TEXT_MAIN = Color3.fromRGB(245, 245, 247)
+local TEXT_MUTED = Color3.fromRGB(120, 120, 132)
+local GREEN_ACTIVE = Color3.fromRGB(46, 204, 113)
+
+local currentLang = "ENG"
+local TRANSLATIONS = {
+    ENG = {
+        authPlaceholder = "Paste License Key",
+        authBtn = "Unlock Script",
+        authChecking = "Checking...",
+        authEmptyKey = "Please enter a key",
+        authSuccess = "Access Granted! Welcome ",
+        authFooter = "discord.gg/redcode",
+        statusIdle = "Status: Idle",
+        statusActive = "Status: Active",
+        btnStart = "Start Auto Fish",
+        btnStop = "Stop Auto Fish",
+        timeLabel = "Time",
+        clicksLabel = "Clicks",
+        hudKey = "R. SHIFT"
+    },
+    PL = {
+        authPlaceholder = "Wklej Klucz Licencji",
+        authBtn = "Odblokuj Skrypt",
+        authChecking = "Sprawdzanie...",
+        authEmptyKey = "Wpisz klucz licencji",
+        authSuccess = "Dostęp przyznany! Witaj ",
+        authFooter = "discord.gg/redcode",
+        statusIdle = "Status: Oczekiwanie",
+        statusActive = "Status: Aktywny",
+        btnStart = "Uruchom Auto Fish",
+        btnStop = "Zatrzymaj Auto Fish",
+        timeLabel = "Czas",
+        clicksLabel = "Kliknięcia",
+        hudKey = "P. SHIFT"
+    }
+}
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RedCode_Core"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+if playerGui:FindFirstChild("RedCode_Core") then
+    playerGui.RedCode_Core:Destroy()
 end
-menuGui.Parent = playerGui
+screenGui.Parent = playerGui
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 320, 0, 240)
-mainFrame.Position = UDim2.new(0.5, -160, 0.5, -120)
-mainFrame.BackgroundColor3 = Color3.fromRGB(8, 14, 22)
-mainFrame.BorderSizePixel = 0
-mainFrame.Active = true
-mainFrame.Draggable = true -- Możliwość swobodnego przesuwania okna
-mainFrame.Parent = menuGui
+local authWindow = Instance.new("Frame")
+authWindow.Name = "AuthWindow"
+authWindow.Size = UDim2.new(0, 320, 0, 195)
+authWindow.Position = UDim2.new(0.5, -160, 0.45, -97)
+authWindow.BackgroundColor3 = BG_COLOR
+authWindow.BorderSizePixel = 0
+authWindow.Active = true
+authWindow.Draggable = true
+authWindow.Parent = screenGui
+Instance.new("UICorner", authWindow).CornerRadius = UDim.new(0, 12)
 
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 14)
-mainCorner.Parent = mainFrame
+local authStroke = Instance.new("UIStroke", authWindow)
+authStroke.Color = BORDER_COLOR
+authStroke.Thickness = 1.2
 
-local mainStroke = Instance.new("UIStroke")
-mainStroke.Color = Color3.fromRGB(0, 217, 245)
-mainStroke.Thickness = 1.6
-mainStroke.Transparency = 0.2
-mainStroke.Parent = mainFrame
+local authTitle = Instance.new("TextLabel", authWindow)
+authTitle.Size = UDim2.new(1, -70, 0, 42)
+authTitle.Position = UDim2.new(0, 16, 0, 4)
+authTitle.BackgroundTransparency = 1
+authTitle.Text = "RedCode <font color='#787884'>1.0</font>"
+authTitle.RichText = true
+authTitle.Font = Enum.Font.BuilderSansBold
+authTitle.TextSize = 16
+authTitle.TextColor3 = ACCENT_RED
+authTitle.TextXAlignment = Enum.TextXAlignment.Left
 
--- Pasek tytułowy
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -24, 0, 36)
-titleLabel.Position = UDim2.new(0, 16, 0, 12)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "AutoFish"
-titleLabel.Font = Enum.Font.FredokaOne
-titleLabel.TextSize = 26
-titleLabel.TextColor3 = Color3.fromRGB(0, 242, 254)
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = mainFrame
+local authLangBtn = Instance.new("TextButton", authWindow)
+authLangBtn.Size = UDim2.new(0, 48, 0, 24)
+authLangBtn.Position = UDim2.new(1, -64, 0, 13)
+authLangBtn.BackgroundColor3 = CARD_BG
+authLangBtn.Text = "ENG"
+authLangBtn.Font = Enum.Font.BuilderSansBold
+authLangBtn.TextSize = 11
+authLangBtn.TextColor3 = TEXT_MAIN
+authLangBtn.BorderSizePixel = 0
+Instance.new("UICorner", authLangBtn).CornerRadius = UDim.new(0, 6)
+local authLangStroke = Instance.new("UIStroke", authLangBtn)
+authLangStroke.Color = BORDER_COLOR
 
-local badge = Instance.new("TextLabel")
-badge.Size = UDim2.new(0, 52, 0, 20)
-badge.Position = UDim2.new(1, -68, 0, 18)
-badge.BackgroundColor3 = Color3.fromRGB(15, 30, 45)
-badge.Text = "PRO"
-badge.Font = Enum.Font.GothamBold
-badge.TextSize = 10
-badge.TextColor3 = Color3.fromRGB(0, 242, 254)
-badge.Parent = mainFrame
-Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 6)
+local keyInput = Instance.new("TextBox", authWindow)
+keyInput.Size = UDim2.new(1, -32, 0, 38)
+keyInput.Position = UDim2.new(0, 16, 0, 48)
+keyInput.BackgroundColor3 = CARD_BG
+keyInput.PlaceholderText = TRANSLATIONS[currentLang].authPlaceholder
+keyInput.Text = ""
+keyInput.Font = Enum.Font.Code
+keyInput.TextSize = 11
+keyInput.TextColor3 = TEXT_MAIN
+keyInput.PlaceholderColor3 = TEXT_MUTED
+keyInput.BorderSizePixel = 0
+keyInput.ClearTextOnFocus = false
+Instance.new("UICorner", keyInput).CornerRadius = UDim.new(0, 8)
+local inputStroke = Instance.new("UIStroke", keyInput)
+inputStroke.Color = BORDER_COLOR
 
-local hintLabel = Instance.new("TextLabel")
-hintLabel.Size = UDim2.new(1, -24, 0, 16)
-hintLabel.Position = UDim2.new(0, 16, 0, 48)
-hintLabel.BackgroundTransparency = 1
-hintLabel.Text = "Bind: [Prawy Shift] • Przeciągnij by przesunąć"
-hintLabel.Font = Enum.Font.GothamMedium
-hintLabel.TextSize = 11
-hintLabel.TextColor3 = Color3.fromRGB(120, 150, 175)
-hintLabel.TextXAlignment = Enum.TextXAlignment.Left
-hintLabel.Parent = mainFrame
+local verifyBtn = Instance.new("TextButton", authWindow)
+verifyBtn.Size = UDim2.new(1, -32, 0, 40)
+verifyBtn.Position = UDim2.new(0, 16, 0, 94)
+verifyBtn.BackgroundColor3 = ACCENT_RED
+verifyBtn.Text = TRANSLATIONS[currentLang].authBtn
+verifyBtn.Font = Enum.Font.BuilderSansBold
+verifyBtn.TextColor3 = Color3.new(1, 1, 1)
+verifyBtn.TextSize = 13
+Instance.new("UICorner", verifyBtn).CornerRadius = UDim.new(0, 8)
 
--- Karta Statusu
-local statusCard = Instance.new("Frame")
-statusCard.Size = UDim2.new(1, -32, 0, 40)
-statusCard.Position = UDim2.new(0, 16, 0, 76)
-statusCard.BackgroundColor3 = Color3.fromRGB(14, 24, 38)
-statusCard.BorderSizePixel = 0
-statusCard.Parent = mainFrame
-Instance.new("UICorner", statusCard).CornerRadius = UDim.new(0, 9)
+local authFooter = Instance.new("TextLabel", authWindow)
+authFooter.Size = UDim2.new(1, 0, 0, 20)
+authFooter.Position = UDim2.new(0, 0, 1, -26)
+authFooter.BackgroundTransparency = 1
+authFooter.Text = TRANSLATIONS[currentLang].authFooter
+authFooter.Font = Enum.Font.BuilderSansMedium
+authFooter.TextSize = 11
+authFooter.TextColor3 = TEXT_MUTED
+authFooter.TextXAlignment = Enum.TextXAlignment.Center
 
-local statusStroke = Instance.new("UIStroke")
-statusStroke.Color = Color3.fromRGB(244, 63, 94)
-statusStroke.Thickness = 1.2
-statusStroke.Parent = statusCard
-
-local statusDot = Instance.new("Frame")
-statusDot.Size = UDim2.new(0, 8, 0, 8)
-statusDot.Position = UDim2.new(0, 14, 0.5, -4)
-statusDot.BackgroundColor3 = Color3.fromRGB(244, 63, 94)
-statusDot.BorderSizePixel = 0
-statusDot.Parent = statusCard
-Instance.new("UICorner", statusDot).CornerRadius = UDim.new(1, 0)
-
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, -36, 1, 0)
-statusLabel.Position = UDim2.new(0, 30, 0, 0)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "STATUS: WYŁĄCZONY"
-statusLabel.Font = Enum.Font.GothamBold
-statusLabel.TextSize = 12
-statusLabel.TextColor3 = Color3.fromRGB(244, 63, 94)
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.Parent = statusCard
-
--- Przycisk Toggle
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(1, -32, 0, 46)
-toggleButton.Position = UDim2.new(0, 16, 0, 130)
-toggleButton.BackgroundColor3 = Color3.fromRGB(0, 201, 232)
-toggleButton.BorderSizePixel = 0
-toggleButton.Font = Enum.Font.GothamBlack
-toggleButton.Text = "URUCHOM BOTA"
-toggleButton.TextColor3 = Color3.fromRGB(6, 16, 26)
-toggleButton.TextSize = 14
-toggleButton.Parent = mainFrame
-Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 10)
-
--- Pasek informacyjny
-local footerLabel = Instance.new("TextLabel")
-footerLabel.Size = UDim2.new(1, -32, 0, 24)
-footerLabel.Position = UDim2.new(0, 16, 0, 192)
-footerLabel.BackgroundTransparency = 1
-footerLabel.Text = "Czas reakcji: 0.16s • Bezpieczny limit timera"
-footerLabel.Font = Enum.Font.Gotham
-footerLabel.TextSize = 10
-footerLabel.TextColor3 = Color3.fromRGB(80, 120, 145)
-footerLabel.Parent = mainFrame
-
--- 2. Sprawdzanie czy minigra nie nałożyła pauzy StreakPaused
-local function isCooldownActive(fishing)
-    local cooldownBar = fishing:FindFirstChild("CooldownBar")
-    if cooldownBar then
-        local streakPaused = cooldownBar:FindFirstChild("StreakPaused")
-        if streakPaused and streakPaused.Visible and streakPaused.TextTransparency < 0.7 then
-            return true
-        end
-    end
-    return false
-end
-
--- 3. Zmienne sterujące i funkcja kliknięcia
-local isRunning = false
-local loopThread = nil
-local isClicking = false
-
-local function performOptimizedClick(btn, fishing)
-    if isClicking then return end
-    isClicking = true
-
-    -- Zoptymalizowany czas reakcji (z 0.28s do 0.16s)
-    task.wait(0.16)
-
-    -- Czekamy maksymalnie 0.3s jeśli gra nałożyła pauzę
-    local waitCount = 0
-    while isCooldownActive(fishing) and btn.Visible and waitCount < 6 do
-        task.wait(0.05)
-        waitCount = waitCount + 1
-    end
-
-    if isRunning and btn.Visible and btn.AbsolutePosition.X > 0 then
-        local pos = btn.AbsolutePosition
-        local size = btn.AbsoluteSize
-        local centerX = pos.X + (size.X / 2)
-        local centerY = pos.Y + (size.Y / 2)
-
-        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
-        task.wait(0.05)
-        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
-    end
-
-    -- Odstęp zabezpieczający przed podwójnym zaliczeniem
-    task.wait(0.35)
-    isClicking = false
+local function updateAuthLanguage()
+    local t = TRANSLATIONS[currentLang]
+    authLangBtn.Text = currentLang
+    keyInput.PlaceholderText = t.authPlaceholder
+    verifyBtn.Text = t.authBtn
+    authFooter.Text = t.authFooter
 end
 
--- 4. Funkcja włączania / wyłączania z pełnym resetem blokad
-local function setBotState(active)
-    isRunning = active
-    isClicking = false -- Gwarancja braku zacięcia po restarcie
-
-    if isRunning then
-        statusLabel.Text = "STATUS: AKTYWNY (SYNCHRONIZACJA)"
-        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 194)
-        statusDot.BackgroundColor3 = Color3.fromRGB(0, 255, 194)
-        statusStroke.Color = Color3.fromRGB(0, 255, 194)
-
-        toggleButton.Text = "ZATRZYMAJ BOTA"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(244, 63, 94)
-        toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-
-        loopThread = task.spawn(function()
-            local lastHandledPos = Vector2.new(-9999, -9999)
-            local lastHitTimestamp = 0
-
-            while isRunning do
-                local fishingGui = playerGui:FindFirstChild("FishingGui")
-                if fishingGui and fishingGui.Enabled then
-                    local fishing = fishingGui:FindFirstChild("Fishing")
-                    if fishing and fishing.Visible then
-                        local btn = fishing:FindFirstChild("ClickSpeedUpActive") or fishing:FindFirstChild("ClickSpeedUp")
-
-                        if btn and btn:IsA("ImageButton") and btn.Visible and btn.AbsoluteSize.X > 10 then
-                            local currentPos = btn.AbsolutePosition
-                            local distance = (currentPos - lastHandledPos).Magnitude
-                            local timeSinceLast = tick() - lastHitTimestamp
-
-                            -- Minimalny czas 0.82s - najszybszy możliwy bez wywoływania StreakPaused
-                            if (distance > 60 and timeSinceLast > 0.82) or (timeSinceLast > 1.15) then
-                                lastHandledPos = currentPos
-                                lastHitTimestamp = tick()
-                                performOptimizedClick(btn, fishing)
-                            end
-                        else
-                            lastHandledPos = Vector2.new(-9999, -9999)
-                        end
-                    else
-                        lastHandledPos = Vector2.new(-9999, -9999)
-                    end
-                else
-                    lastHandledPos = Vector2.new(-9999, -9999)
-                end
-
-                task.wait(0.015)
-            end
-        end)
-    else
-        statusLabel.Text = "STATUS: WYŁĄCZONY"
-        statusLabel.TextColor3 = Color3.fromRGB(244, 63, 94)
-        statusDot.BackgroundColor3 = Color3.fromRGB(244, 63, 94)
-        statusStroke.Color = Color3.fromRGB(244, 63, 94)
-
-        toggleButton.Text = "URUCHOM BOTA"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(0, 201, 232)
-        toggleButton.TextColor3 = Color3.fromRGB(6, 16, 26)
-
-        if loopThread then
-            task.cancel(loopThread)
-            loopThread = nil
-        end
-    end
-end
-
-toggleButton.MouseButton1Click:Connect(function()
-    setBotState(not isRunning)
+authLangBtn.MouseButton1Click:Connect(function()
+    currentLang = (currentLang == "ENG") and "PL" or "ENG"
+    updateAuthLanguage()
 end)
 
--- Prawy Shift do chowania i pokazywania okna
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        mainFrame.Visible = not mainFrame.Visible
+local function checkLicenseOnline(key)
+    local req = (syn and syn.request) or (http and http.request) or http_request or request
+    if not req then
+        return false, (currentLang == "PL") and "Brak obsługi HTTP w executorze" or "Executor lacks HTTP request function"
     end
+
+    local success, response = pcall(function()
+        return req({
+            Url = AUTH_URL .. HttpService:UrlEncode(key),
+            Method = "GET"
+        })
+    end)
+
+    if not success or not response then
+        return false, (currentLang == "PL") and "Błąd połączenia z serwerem licencji" or "Connection error to license server"
+    end
+
+    if response.StatusCode == 200 then
+        local decodeSuccess, data = pcall(function()
+            return HttpService:JSONDecode(response.Body)
+        end)
+
+        if decodeSuccess and data and data.valid then
+            return true, data.user or "Authorized User"
+        end
+    end
+
+    return false, (currentLang == "PL") and "Nieprawidłowy lub wygasły klucz" or "Invalid or Expired License Key"
+end
+
+local function loadMainInterface(authorizedUser)
+    authWindow:Destroy()
+
+    local hudBadge = Instance.new("TextButton")
+    hudBadge.Name = "HUDBadge"
+    hudBadge.Size = UDim2.new(0, 175, 0, 38)
+    hudBadge.Position = UDim2.new(1, -190, 0, 48)
+    hudBadge.BackgroundColor3 = BG_COLOR
+    hudBadge.BorderSizePixel = 0
+    hudBadge.AutoButtonColor = false
+    hudBadge.Text = ""
+    hudBadge.Visible = false
+    hudBadge.Parent = screenGui
+    Instance.new("UICorner", hudBadge).CornerRadius = UDim.new(0, 10)
+
+    local hudStroke = Instance.new("UIStroke", hudBadge)
+    hudStroke.Color = BORDER_COLOR
+    hudStroke.Thickness = 1.2
+
+    local hudCenterFrame = Instance.new("Frame", hudBadge)
+    hudCenterFrame.Size = UDim2.new(1, 0, 1, 0)
+    hudCenterFrame.BackgroundTransparency = 1
+
+    local hudLayout = Instance.new("UIListLayout", hudCenterFrame)
+    hudLayout.FillDirection = Enum.FillDirection.Horizontal
+    hudLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    hudLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    hudLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    hudLayout.Padding = UDim.new(0, 8)
+
+    local hudDot = Instance.new("Frame", hudCenterFrame)
+    hudDot.Size = UDim2.new(0, 7, 0, 7)
+    hudDot.BackgroundColor3 = ACCENT_RED
+    hudDot.LayoutOrder = 1
+    Instance.new("UICorner", hudDot).CornerRadius = UDim.new(1, 0)
+
+    local hudText = Instance.new("TextLabel", hudCenterFrame)
+    hudText.Size = UDim2.new(0, 0, 1, 0)
+    hudText.AutomaticSize = Enum.AutomaticSize.X
+    hudText.BackgroundTransparency = 1
+    hudText.Text = string.format("RedCode  [<font color='#eb2341'>%s</font>]", TRANSLATIONS[currentLang].hudKey)
+    hudText.RichText = true
+    hudText.Font = Enum.Font.BuilderSansBold
+    hudText.TextSize = 13
+    hudText.TextColor3 = TEXT_MAIN
+    hudText.LayoutOrder = 2
+
+    local window = Instance.new("Frame")
+    window.Name = "MainWindow"
+    window.Size = UDim2.new(0, 310, 0, 240)
+    window.Position = UDim2.new(0.5, -155, 0.45, -120)
+    window.BackgroundColor3 = BG_COLOR
+    window.BorderSizePixel = 0
+    window.Active = true
+    window.Draggable = true
+    window.Visible = true
+    window.Parent = screenGui
+    Instance.new("UICorner", window).CornerRadius = UDim.new(0, 12)
+
+    local windowStroke = Instance.new("UIStroke", window)
+    windowStroke.Color = BORDER_COLOR
+    windowStroke.Thickness = 1
+
+    local header = Instance.new("Frame", window)
+    header.Size = UDim2.new(1, 0, 0, 44)
+    header.BackgroundTransparency = 1
+
+    local title = Instance.new("TextLabel", header)
+    title.Size = UDim2.new(0, 150, 1, 0)
+    title.Position = UDim2.new(0, 16, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "RedCode <font color='#787884'>1.0</font>"
+    title.RichText = true
+    title.Font = Enum.Font.BuilderSansBold
+    title.TextSize = 16
+    title.TextColor3 = ACCENT_RED
+    title.TextXAlignment = Enum.TextXAlignment.Left
+
+    local langBtn = Instance.new("TextButton", header)
+    langBtn.Size = UDim2.new(0, 52, 0, 24)
+    langBtn.Position = UDim2.new(1, -68, 0.5, -12)
+    langBtn.BackgroundColor3 = CARD_BG
+    langBtn.Text = currentLang
+    langBtn.Font = Enum.Font.BuilderSansBold
+    langBtn.TextSize = 11
+    langBtn.TextColor3 = TEXT_MAIN
+    langBtn.BorderSizePixel = 0
+    Instance.new("UICorner", langBtn).CornerRadius = UDim.new(0, 6)
+    local langStroke = Instance.new("UIStroke", langBtn)
+    langStroke.Color = BORDER_COLOR
+
+    local statusCard = Instance.new("Frame", window)
+    statusCard.Size = UDim2.new(1, -32, 0, 38)
+    statusCard.Position = UDim2.new(0, 16, 0, 46)
+    statusCard.BackgroundColor3 = CARD_BG
+    statusCard.BorderSizePixel = 0
+    Instance.new("UICorner", statusCard).CornerRadius = UDim.new(0, 8)
+    local cardStroke = Instance.new("UIStroke", statusCard)
+    cardStroke.Color = BORDER_COLOR
+
+    local led = Instance.new("Frame", statusCard)
+    led.Size = UDim2.new(0, 6, 0, 6)
+    led.Position = UDim2.new(0, 12, 0.5, -3)
+    led.BackgroundColor3 = TEXT_MUTED
+    Instance.new("UICorner", led).CornerRadius = UDim.new(1, 0)
+
+    local statusText = Instance.new("TextLabel", statusCard)
+    statusText.Size = UDim2.new(1, -30, 1, 0)
+    statusText.Position = UDim2.new(0, 26, 0, 0)
+    statusText.BackgroundTransparency = 1
+    statusText.Text = TRANSLATIONS[currentLang].statusIdle
+    statusText.Font = Enum.Font.BuilderSansMedium
+    statusText.TextSize = 13
+    statusText.TextColor3 = TEXT_MUTED
+    statusText.TextXAlignment = Enum.TextXAlignment.Left
+
+    local statsContainer = Instance.new("Frame", window)
+    statsContainer.Size = UDim2.new(1, -32, 0, 36)
+    statsContainer.Position = UDim2.new(0, 16, 0, 90)
+    statsContainer.BackgroundColor3 = CARD_BG
+    statsContainer.BorderSizePixel = 0
+    Instance.new("UICorner", statsContainer).CornerRadius = UDim.new(0, 8)
+    local statsStroke = Instance.new("UIStroke", statsContainer)
+    statsStroke.Color = BORDER_COLOR
+
+    local timeText = Instance.new("TextLabel", statsContainer)
+    timeText.Size = UDim2.new(0.5, -10, 1, 0)
+    timeText.Position = UDim2.new(0, 12, 0, 0)
+    timeText.BackgroundTransparency = 1
+    timeText.Text = string.format("%s: 00:00", TRANSLATIONS[currentLang].timeLabel)
+    timeText.Font = Enum.Font.BuilderSansMedium
+    timeText.TextSize = 12
+    timeText.TextColor3 = TEXT_MAIN
+    timeText.TextXAlignment = Enum.TextXAlignment.Left
+
+    local clicksText = Instance.new("TextLabel", statsContainer)
+    clicksText.Size = UDim2.new(0.5, -10, 1, 0)
+    clicksText.Position = UDim2.new(0.5, 0, 0, 0)
+    clicksText.BackgroundTransparency = 1
+    clicksText.Text = string.format("%s: 0", TRANSLATIONS[currentLang].clicksLabel)
+    clicksText.Font = Enum.Font.BuilderSansMedium
+    clicksText.TextSize = 12
+    clicksText.TextColor3 = TEXT_MAIN
+    clicksText.TextXAlignment = Enum.TextXAlignment.Right
+
+    local toggleBtn = Instance.new("TextButton", window)
+    toggleBtn.Size = UDim2.new(1, -32, 0, 42)
+    toggleBtn.Position = UDim2.new(0, 16, 0, 134)
+    toggleBtn.BackgroundColor3 = ACCENT_RED
+    toggleBtn.Text = TRANSLATIONS[currentLang].btnStart
+    toggleBtn.Font = Enum.Font.BuilderSansBold
+    toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+    toggleBtn.TextSize = 14
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 8)
+
+    local btnStroke = Instance.new("UIStroke", toggleBtn)
+    btnStroke.Color = ACCENT_RED
+    btnStroke.Thickness = 1
+
+    local footer = Instance.new("TextLabel", window)
+    footer.Size = UDim2.new(1, 0, 0, 20)
+    footer.Position = UDim2.new(0, 0, 1, -26)
+    footer.BackgroundTransparency = 1
+    footer.Text = "By tsik4f"
+    footer.Font = Enum.Font.BuilderSansMedium
+    footer.TextSize = 11
+    footer.TextColor3 = TEXT_MUTED
+    footer.TextXAlignment = Enum.TextXAlignment.Center
+
+    local isFishing = false
+    local fishThread = nil
+    local clickCount = 0
+    local sessionSeconds = 0
+
+    local function refreshLanguage()
+        local t = TRANSLATIONS[currentLang]
+        langBtn.Text = currentLang
+        hudText.Text = string.format("RedCode  [<font color='#eb2341'>%s</font>]", t.hudKey)
+
+        statusText.Text = isFishing and t.statusActive or t.statusIdle
+        toggleBtn.Text = isFishing and t.btnStop or t.btnStart
+
+        local mins = math.floor(sessionSeconds / 60)
+        local secs = sessionSeconds % 60
+        timeText.Text = string.format("%s: %02d:%02d", t.timeLabel, mins, secs)
+        clicksText.Text = string.format("%s: %d", t.clicksLabel, clickCount)
+    end
+
+    langBtn.MouseButton1Click:Connect(function()
+        currentLang = (currentLang == "ENG") and "PL" or "ENG"
+        refreshLanguage()
+    end)
+
+    local function executeFastClick(btn)
+        local center = btn.AbsolutePosition + (btn.AbsoluteSize / 2)
+        VirtualInputManager:SendMouseMoveEvent(center.X, center.Y, game)
+        task.wait(0.01)
+        VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 1)
+        task.wait(0.03)
+        VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 1)
+    end
+
+    toggleBtn.MouseButton1Click:Connect(function()
+        isFishing = not isFishing
+        local t = TRANSLATIONS[currentLang]
+
+        if isFishing then
+            led.BackgroundColor3 = GREEN_ACTIVE
+            statusText.Text = t.statusActive
+            statusText.TextColor3 = GREEN_ACTIVE
+            toggleBtn.Text = t.btnStop
+            toggleBtn.BackgroundColor3 = CARD_BG
+            toggleBtn.TextColor3 = ACCENT_RED
+
+            fishThread = task.spawn(function()
+                local lastTargetPos = Vector2.new(-9999, -9999)
+                local currentSpawnTime = 0
+                local clickedThisCircle = false
+
+                while isFishing do
+                    local fishingGui = playerGui:FindFirstChild("FishingGui")
+                    if fishingGui and fishingGui.Enabled then
+                        local fishing = fishingGui:FindFirstChild("Fishing")
+                        if fishing and fishing.Visible then
+                            local btn = fishing:FindFirstChild("ClickSpeedUpActive") or fishing:FindFirstChild("ClickSpeedUp")
+
+                            if btn and btn.Visible and btn.AbsoluteSize.X > 10 then
+                                local curPos = btn.AbsolutePosition
+
+                                if (curPos - lastTargetPos).Magnitude > 30 then
+                                    lastTargetPos = curPos
+                                    currentSpawnTime = tick()
+                                    clickedThisCircle = false
+                                end
+
+                                local circleAge = tick() - currentSpawnTime
+                                if not clickedThisCircle and circleAge >= 0.28 then
+                                    clickedThisCircle = true
+                                    executeFastClick(btn)
+                                    clickCount = clickCount + 1
+                                    clicksText.Text = string.format("%s: %d", TRANSLATIONS[currentLang].clicksLabel, clickCount)
+                                end
+                            else
+                                lastTargetPos = Vector2.new(-9999, -9999)
+                                clickedThisCircle = false
+                            end
+                        else
+                            lastTargetPos = Vector2.new(-9999, -9999)
+                            clickedThisCircle = false
+                        end
+                    end
+                    task.wait(0.015)
+                end
+            end)
+        else
+            led.BackgroundColor3 = TEXT_MUTED
+            statusText.Text = t.statusIdle
+            statusText.TextColor3 = TEXT_MUTED
+            toggleBtn.Text = t.btnStart
+            toggleBtn.BackgroundColor3 = ACCENT_RED
+            toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+
+            if fishThread then
+                task.cancel(fishThread)
+                fishThread = nil
+            end
+        end
+    end)
+
+    task.spawn(function()
+        while screenGui.Parent do
+            if isFishing then
+                sessionSeconds = sessionSeconds + 1
+                local mins = math.floor(sessionSeconds / 60)
+                local secs = sessionSeconds % 60
+                timeText.Text = string.format("%s: %02d:%02d", TRANSLATIONS[currentLang].timeLabel, mins, secs)
+            end
+            task.wait(1)
+        end
+    end)
+
+    local function toggleVisibility()
+        window.Visible = not window.Visible
+        hudBadge.Visible = not window.Visible
+    end
+
+    hudBadge.MouseButton1Click:Connect(toggleVisibility)
+
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if input.KeyCode == Enum.KeyCode.RightShift then
+            toggleVisibility()
+        end
+    end)
+end
+
+verifyBtn.MouseButton1Click:Connect(function()
+    local t = TRANSLATIONS[currentLang]
+    local enteredKey = keyInput.Text:gsub("%s+", "")
+    if enteredKey == "" then
+        authFooter.Text = t.authEmptyKey
+        authFooter.TextColor3 = ACCENT_RED
+        task.delay(2, function()
+            if authFooter and authFooter.Parent then
+                authFooter.Text = t.authFooter
+                authFooter.TextColor3 = TEXT_MUTED
+            end
+        end)
+        return
+    end
+
+    verifyBtn.Text = t.authChecking
+    authFooter.Text = t.authFooter
+    authFooter.TextColor3 = TEXT_MUTED
+
+    task.spawn(function()
+        local ok, msg = checkLicenseOnline(enteredKey)
+        if ok then
+            authFooter.Text = t.authSuccess .. tostring(msg)
+            authFooter.TextColor3 = GREEN_ACTIVE
+            task.wait(0.6)
+            loadMainInterface(msg)
+        else
+            verifyBtn.Text = t.authBtn
+            authFooter.Text = tostring(msg)
+            authFooter.TextColor3 = ACCENT_RED
+            task.delay(2.5, function()
+                if authFooter and authFooter.Parent then
+                    authFooter.Text = t.authFooter
+                    authFooter.TextColor3 = TEXT_MUTED
+                end
+            end)
+        end
+    end)
 end)
